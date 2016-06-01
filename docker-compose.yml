@@ -1,0 +1,50 @@
+version: '2'
+
+services:
+
+    redis:
+        image: redis:latest
+        expose:
+            - "6379"
+        restart: always
+
+    database:
+        image: postgres:latest
+        environment:
+            - POSTGRES_USER:sentry
+            - POSTGRES_PASSWORD:sentry
+        expose:
+            - "5432"
+        volumes:
+            - /var/data/sentry/postgres/:/var/lib/postgresql/data/
+        restart: always
+
+    sentry:
+        image: sentry:onbuild
+        links:
+            - redis
+            - database
+        env_file:
+            - .env
+        ports:
+            - 9000:9000
+
+    celery-beat:
+        image: sentry:onbuild
+        links:
+            - redis
+            - database
+        env_file:
+            - .env
+        command: sentry celery beat
+        restart: always
+
+    celery-worker:
+        image: sentry:onbuild
+        links:
+            - redis
+            - database
+        env_file:
+            - .env
+        command: sentry celery worker
+        restart: always
